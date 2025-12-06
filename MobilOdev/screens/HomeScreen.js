@@ -1,114 +1,168 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useRef } from 'react'; // <-- Sadece kancaları alıyoruz
+import { 
+  View, Text, StyleSheet, TouchableOpacity, AppState, Modal 
+} from 'react-native';
 
 export default function HomeScreen() {
-  // 1. STATE TANIMLARI (Durum değişkenleri)
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 dakika (saniye cinsinden)
-  const [isActive, setIsActive] = useState(false);   // Sayaç çalışıyor mu?
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [isActive, setIsActive] = useState(false);
+  const [category, setCategory] = useState("Ders Çalışma");
+  const [distractionCount, setDistractionCount] = useState(0);
+  const [showSummary, setShowSummary] = useState(false);
+  
+  const appState = useRef(AppState.currentState);
 
-  // 2. SAYACIN MANTIĞI (useEffect)
   useEffect(() => {
     let interval = null;
-
-    // Eğer sayaç aktifse ve süre bitmediyse
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((time) => time - 1); // Her saniye 1 azalt
+        setTimeLeft((time) => time - 1);
       }, 1000);
     } else if (timeLeft === 0) {
-      // Süre bittiyse durdur
       setIsActive(false);
-      alert("Süre doldu! 🎉"); // Basit bir uyarı
+      setShowSummary(true);
     }
-
-    // Temizlik fonksiyonu (Memory leak önlemek için)
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
-  // 3. ZAMANI FORMATLAMA FONKSİYONU (Örn: 1500 sn -> 25:00)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (
+        appState.current.match(/active/) && 
+        nextAppState.match(/inactive|background/) &&
+        isActive
+      ) {
+        setIsActive(false);
+        setDistractionCount((prev) => prev + 1);
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isActive]);
+
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    // Eğer sayı 10'dan küçükse başına '0' koy (örn: 09)
     return `${minutes < 10 ? '0' : ''}${minutes}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  // 4. BUTON FONKSİYONLARI
-  const handleStartStop = () => {
-    setIsActive(!isActive); // Durumu tersine çevir
   };
 
   const handleReset = () => {
     setIsActive(false);
-    setTimeLeft(25 * 60); // Tekrar 25 dakikaya döndür
+    setTimeLeft(25 * 60);
+    setDistractionCount(0);
+  };
+
+  const handleFinish = () => {
+    setIsActive(false);
+    setShowSummary(true);
+  };
+
+  const closeSummary = () => {
+    setShowSummary(false);
+    handleReset();
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Odaklanma Zamanı</Text>
-      
-      {/* Sayaç Göstergesi */}
-      <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+      <Text style={styles.header}>Odaklanma Zamanı 🎯</Text>
 
-      {/* Butonlar */}
+      <View style={styles.categoryContainer}>
+        {["Ders Çalışma", "Kodlama", "Kitap"].map((cat) => (
+          <TouchableOpacity 
+            key={cat} 
+            style={[styles.catButton, category === cat && styles.catButtonActive]}
+            onPress={() => setCategory(cat)}
+            disabled={isActive}
+          >
+            <Text style={[styles.catText, category === cat && styles.catTextActive]}>
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={styles.timerCircle}>
+        <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+        <Text style={styles.distractionText}>
+           Dikkat Dağınıklığı: {distractionCount}
+        </Text>
+      </View>
+
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
-          style={[styles.button, isActive ? styles.stopButton : styles.startButton]} 
-          onPress={handleStartStop}
+          style={[styles.button, isActive ? styles.pauseButton : styles.startButton]} 
+          onPress={() => setIsActive(!isActive)}
         >
-          <Text style={styles.buttonText}>{isActive ? "Durdur" : "Başlat"}</Text>
+          <Text style={styles.buttonText}>{isActive ? "Duraklat" : "Başlat"}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={handleReset}>
-          <Text style={styles.buttonText}>Sıfırla</Text>
+        <TouchableOpacity 
+          style={[styles.button, styles.resetButton]} 
+          onPress={handleFinish}
+        >
+          <Text style={styles.buttonText}>Bitir</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={showSummary} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Seans Özeti 📝</Text>
+            
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>Kategori:</Text>
+              <Text style={styles.modalValue}>{category}</Text>
+            </View>
+
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>Süre:</Text>
+              <Text style={styles.modalValue}>
+                {Math.floor((25 * 60 - timeLeft) / 60)} dk
+              </Text>
+            </View>
+
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>Dikkat Dağınıklığı:</Text>
+              <Text style={[styles.modalValue, { color: 'red' }]}>
+                {distractionCount} Kez
+              </Text>
+            </View>
+
+            <TouchableOpacity style={styles.closeButton} onPress={closeSummary}>
+              <Text style={styles.buttonText}>Kaydet ve Kapat</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-// 5. TASARIM (STYLES)
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#2c3e50', // Koyu güzel bir arka plan
-  },
-  title: {
-    fontSize: 24,
-    color: '#ecf0f1',
-    marginBottom: 20,
-    fontWeight: 'bold',
-  },
-  timerText: {
-    fontSize: 80, // Büyük puntolu saat
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 40,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  button: {
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 30,
-    elevation: 5, // Android gölgesi
-  },
-  startButton: {
-    backgroundColor: '#27ae60', // Yeşil
-  },
-  stopButton: {
-    backgroundColor: '#c0392b', // Kırmızı
-  },
-  resetButton: {
-    backgroundColor: '#7f8c8d', // Gri
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+  container: { flex: 1, backgroundColor: '#2c3e50', alignItems: 'center', paddingTop: 50 },
+  header: { fontSize: 24, color: '#fff', fontWeight: 'bold', marginBottom: 20 },
+  categoryContainer: { flexDirection: 'row', marginBottom: 30, gap: 10 },
+  catButton: { padding: 10, borderRadius: 20, borderWidth: 1, borderColor: '#bdc3c7' },
+  catButtonActive: { backgroundColor: '#3498db', borderColor: '#3498db' },
+  catText: { color: '#bdc3c7' },
+  catTextActive: { color: '#fff', fontWeight: 'bold' },
+  timerCircle: { width: 250, height: 250, borderRadius: 125, borderWidth: 5, borderColor: '#3498db', justifyContent: 'center', alignItems: 'center', marginBottom: 40, backgroundColor: 'rgba(52, 152, 219, 0.1)' },
+  timerText: { fontSize: 60, color: '#fff', fontWeight: 'bold' },
+  distractionText: { color: '#e74c3c', marginTop: 10, fontSize: 14 },
+  buttonContainer: { flexDirection: 'row', gap: 20 },
+  button: { paddingVertical: 15, paddingHorizontal: 40, borderRadius: 30 },
+  startButton: { backgroundColor: '#27ae60' },
+  pauseButton: { backgroundColor: '#f39c12' },
+  resetButton: { backgroundColor: '#c0392b' },
+  buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' },
+  modalContent: { width: '80%', backgroundColor: '#fff', padding: 20, borderRadius: 15, alignItems: 'center' },
+  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: '#2c3e50' },
+  modalRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 5 },
+  modalLabel: { fontSize: 16, color: '#7f8c8d' },
+  modalValue: { fontSize: 16, fontWeight: 'bold', color: '#2c3e50' },
+  closeButton: { marginTop: 20, backgroundColor: '#3498db', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' },
 });
