@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'; // <-- Sadece kancaları alıyoruz
+import { useState, useEffect, useRef } from 'react';
 import { 
-  View, Text, StyleSheet, TouchableOpacity, AppState, Modal 
+  View, Text, StyleSheet, TouchableOpacity, AppState, Modal, StatusBar 
 } from 'react-native';
 
 export default function HomeScreen() {
@@ -67,6 +67,9 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Üstteki barın rengini koyu yapıyoruz ki beyaz ekranda görünsün */}
+      <StatusBar barStyle="dark-content" /> 
+      
       <Text style={styles.header}>Odaklanma Zamanı 🎯</Text>
 
       <View style={styles.categoryContainer}>
@@ -107,7 +110,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <Modal visible={showSummary} transparent={true} animationType="slide">
+      <Modal visible={showSummary} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Seans Özeti 📝</Text>
@@ -126,7 +129,7 @@ export default function HomeScreen() {
 
             <View style={styles.modalRow}>
               <Text style={styles.modalLabel}>Dikkat Dağınıklığı:</Text>
-              <Text style={[styles.modalValue, { color: 'red' }]}>
+              <Text style={[styles.modalValue, { color: '#ff7675' }]}>
                 {distractionCount} Kez
               </Text>
             </View>
@@ -141,28 +144,138 @@ export default function HomeScreen() {
   );
 }
 
+// --- YENİ RENK PALETİ VE TASARIM ---
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#2c3e50', alignItems: 'center', paddingTop: 50 },
-  header: { fontSize: 24, color: '#fff', fontWeight: 'bold', marginBottom: 20 },
-  categoryContainer: { flexDirection: 'row', marginBottom: 30, gap: 10 },
-  catButton: { padding: 10, borderRadius: 20, borderWidth: 1, borderColor: '#bdc3c7' },
-  catButtonActive: { backgroundColor: '#3498db', borderColor: '#3498db' },
-  catText: { color: '#bdc3c7' },
-  catTextActive: { color: '#fff', fontWeight: 'bold' },
-  timerCircle: { width: 250, height: 250, borderRadius: 125, borderWidth: 5, borderColor: '#3498db', justifyContent: 'center', alignItems: 'center', marginBottom: 40, backgroundColor: 'rgba(52, 152, 219, 0.1)' },
-  timerText: { fontSize: 60, color: '#fff', fontWeight: 'bold' },
-  distractionText: { color: '#e74c3c', marginTop: 10, fontSize: 14 },
-  buttonContainer: { flexDirection: 'row', gap: 20 },
-  button: { paddingVertical: 15, paddingHorizontal: 40, borderRadius: 30 },
-  startButton: { backgroundColor: '#27ae60' },
-  pauseButton: { backgroundColor: '#f39c12' },
-  resetButton: { backgroundColor: '#c0392b' },
-  buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-  modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' },
-  modalContent: { width: '80%', backgroundColor: '#fff', padding: 20, borderRadius: 15, alignItems: 'center' },
-  modalTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: '#2c3e50' },
-  modalRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 10, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 5 },
-  modalLabel: { fontSize: 16, color: '#7f8c8d' },
-  modalValue: { fontSize: 16, fontWeight: 'bold', color: '#2c3e50' },
-  closeButton: { marginTop: 20, backgroundColor: '#3498db', padding: 15, borderRadius: 10, width: '100%', alignItems: 'center' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#f8f9fa', // Kırık Beyaz (Modern Arkaplan)
+    alignItems: 'center', 
+    paddingTop: 60,
+  },
+  header: { 
+    fontSize: 28, 
+    color: '#2d3436', // Koyu Gri (Siyah yerine daha yumuşak)
+    fontWeight: 'bold', 
+    marginBottom: 30,
+    letterSpacing: 1,
+  },
+  // Kategori Stilleri
+  categoryContainer: { 
+    flexDirection: 'row', 
+    marginBottom: 40, 
+    gap: 12,
+  },
+  catButton: { 
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25, 
+    borderWidth: 1.5, 
+    borderColor: '#dfe6e9', 
+    backgroundColor: '#fff',
+    elevation: 2, // Hafif gölge
+  },
+  catButtonActive: { 
+    backgroundColor: '#6c5ce7', // Modern Mor (Lila)
+    borderColor: '#6c5ce7', 
+  },
+  catText: { 
+    color: '#b2bec3', 
+    fontWeight: '600',
+  },
+  catTextActive: { 
+    color: '#fff', 
+    fontWeight: 'bold', 
+  },
+  // Sayaç Stilleri
+  timerCircle: { 
+    width: 280, 
+    height: 280, 
+    borderRadius: 140, 
+    borderWidth: 8, 
+    borderColor: '#a29bfe', // Açık Mor
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginBottom: 50, 
+    backgroundColor: '#fff',
+    elevation: 10, // Belirgin gölge (3D efekti)
+    shadowColor: '#6c5ce7',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 }
+  },
+  timerText: { 
+    fontSize: 70, 
+    color: '#2d3436', // Koyu Gri
+    fontWeight: 'bold', 
+    fontVariant: ['tabular-nums'], // Rakamların titremesini engeller
+  },
+  distractionText: { 
+    color: '#ff7675', // Soft Kırmızı
+    marginTop: 10, 
+    fontSize: 16,
+    fontWeight: '600'
+  },
+  // Buton Stilleri
+  buttonContainer: { 
+    flexDirection: 'row', 
+    gap: 20,
+  },
+  button: { 
+    paddingVertical: 18, 
+    paddingHorizontal: 40, 
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 }
+  },
+  startButton: { backgroundColor: '#00b894' }, // Mint Yeşili
+  pauseButton: { backgroundColor: '#fdcb6e' }, // Hardal Sarısı
+  resetButton: { backgroundColor: '#ff7675' }, // Soft Kırmızı (Mercan)
+  buttonText: { 
+    color: '#fff', 
+    fontSize: 18, 
+    fontWeight: 'bold',
+    letterSpacing: 0.5 
+  },
+  // Modal Stilleri
+  modalContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(45, 52, 54, 0.8)', // Arkası hafif koyu
+  },
+  modalContent: { 
+    width: '85%', 
+    backgroundColor: '#fff', 
+    padding: 25, 
+    borderRadius: 20, 
+    alignItems: 'center',
+    elevation: 10,
+  },
+  modalTitle: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    marginBottom: 20, 
+    color: '#2d3436',
+  },
+  modalRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    width: '100%', 
+    marginBottom: 15, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#f1f2f6', 
+    paddingBottom: 10, 
+  },
+  modalLabel: { fontSize: 16, color: '#636e72', fontWeight: '500' },
+  modalValue: { fontSize: 18, fontWeight: 'bold', color: '#2d3436' },
+  closeButton: { 
+    marginTop: 20, 
+    backgroundColor: '#6c5ce7', // Ana Mor Renk
+    paddingVertical: 15,
+    borderRadius: 15, 
+    width: '100%', 
+    alignItems: 'center', 
+  },
 });
