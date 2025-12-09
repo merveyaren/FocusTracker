@@ -4,13 +4,26 @@ import {
 } from 'react-native';
 
 export default function HomeScreen() {
+  // 1. YENİ STATE: Başlangıç süresini tutuyoruz (Değiştirilebilir)
+  const [initialTime, setInitialTime] = useState(25 * 60); 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
+  
   const [isActive, setIsActive] = useState(false);
-  const [category, setCategory] = useState("Ders Çalışma");
+  const [category, setCategory] = useState("📚 Ders"); 
   const [distractionCount, setDistractionCount] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   
   const appState = useRef(AppState.currentState);
+
+  // --- SÜRE DEĞİŞTİRME MANTIĞI ---
+  const changeTime = (minutes) => {
+    const newTime = initialTime + (minutes * 60);
+    // Sınırlar: En az 5 dk, En çok 120 dk
+    if (newTime >= 5 * 60 && newTime <= 120 * 60) {
+      setInitialTime(newTime);
+      setTimeLeft(newTime); // Sayacı da hemen güncelle
+    }
+  };
 
   useEffect(() => {
     let interval = null;
@@ -51,10 +64,19 @@ export default function HomeScreen() {
 
   const handleReset = () => {
     setIsActive(false);
-    setTimeLeft(25 * 60);
+    // Sıfırlarken "initialTime" neyse ona dön
+    setTimeLeft(initialTime); 
     setDistractionCount(0);
   };
-
+const quotes = [
+  "Başlamak, bitirmenin yarısıdır. 🚀",
+  "Bugün ektiğin tohumlar, yarın çiçek açacak. 🌱",
+  "Odaklanmak, hayır diyebilme sanatıdır. 🎨",
+  "Yorgun olduğunda değil, bittiğinde dur. 💪",
+  "Kod yazmak bir süper güçtür. 💻"
+];
+// Rastgele birini seçmek için:
+const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
   const handleFinish = () => {
     setIsActive(false);
     setShowSummary(true);
@@ -65,15 +87,17 @@ export default function HomeScreen() {
     handleReset();
   };
 
+  const categories = ["📚 Ders", "💻 Kodlama", "📖 Kitap", "🧘 Spor"];
+
   return (
     <View style={styles.container}>
-      {/* Üstteki barın rengini koyu yapıyoruz ki beyaz ekranda görünsün */}
       <StatusBar barStyle="dark-content" /> 
       
-      <Text style={styles.header}>Odaklanma Zamanı 🎯</Text>
+      <Text style={styles.header}>Pomodoro Sayacı ⏳</Text>
 
+      {/* KATEGORİ SEÇİMİ */}
       <View style={styles.categoryContainer}>
-        {["Ders Çalışma", "Kodlama", "Kitap"].map((cat) => (
+        {categories.map((cat) => (
           <TouchableOpacity 
             key={cat} 
             style={[styles.catButton, category === cat && styles.catButtonActive]}
@@ -87,13 +111,39 @@ export default function HomeScreen() {
         ))}
       </View>
 
+      {/* --- YENİ EKLENEN SÜRE SEÇİM ALANI --- */}
+      <View style={styles.timeSelector}>
+         <TouchableOpacity 
+            style={[styles.timeBtn, isActive && styles.disabledBtn]} 
+            onPress={() => changeTime(-5)}
+            disabled={isActive}
+         >
+            <Text style={styles.timeBtnText}>-5</Text>
+         </TouchableOpacity>
+
+         <View style={styles.timeDisplay}>
+            <Text style={styles.timeLabel}>SÜRE</Text>
+            <Text style={styles.timeValue}>{initialTime / 60} dk</Text>
+         </View>
+
+         <TouchableOpacity 
+            style={[styles.timeBtn, isActive && styles.disabledBtn]} 
+            onPress={() => changeTime(5)}
+            disabled={isActive}
+         >
+            <Text style={styles.timeBtnText}>+5</Text>
+         </TouchableOpacity>
+      </View>
+
+      {/* SAYAÇ DAİRESİ */}
       <View style={styles.timerCircle}>
         <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
         <Text style={styles.distractionText}>
-           Dikkat Dağınıklığı: {distractionCount}
+           Dikkat: {distractionCount}
         </Text>
       </View>
 
+      {/* BUTONLAR */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={[styles.button, isActive ? styles.pauseButton : styles.startButton]} 
@@ -110,6 +160,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* ÖZET MODAL */}
       <Modal visible={showSummary} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -121,9 +172,14 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.modalRow}>
-              <Text style={styles.modalLabel}>Süre:</Text>
+              <Text style={styles.modalLabel}>Hedef Süre:</Text>
+              <Text style={styles.modalValue}>{initialTime / 60} dk</Text>
+            </View>
+
+            <View style={styles.modalRow}>
+              <Text style={styles.modalLabel}>Çalışılan:</Text>
               <Text style={styles.modalValue}>
-                {Math.floor((25 * 60 - timeLeft) / 60)} dk
+                {Math.floor((initialTime - timeLeft) / 60)} dk
               </Text>
             </View>
 
@@ -144,84 +200,130 @@ export default function HomeScreen() {
   );
 }
 
-// --- YENİ RENK PALETİ VE TASARIM ---
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#f8f9fa', // Kırık Beyaz (Modern Arkaplan)
+    backgroundColor: '#f8f9fa', 
     alignItems: 'center', 
-    paddingTop: 60,
+    paddingTop: 50,
   },
   header: { 
-    fontSize: 28, 
-    color: '#2d3436', // Koyu Gri (Siyah yerine daha yumuşak)
+    fontSize: 26, 
+    color: '#2d3436', 
     fontWeight: 'bold', 
-    marginBottom: 30,
+    marginBottom: 20,
     letterSpacing: 1,
   },
-  // Kategori Stilleri
+  // Kategori
   categoryContainer: { 
     flexDirection: 'row', 
-    marginBottom: 40, 
-    gap: 12,
+    marginBottom: 20, 
+    gap: 10,
   },
   catButton: { 
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 25, 
-    borderWidth: 1.5, 
+    paddingVertical: 8,
+    paddingHorizontal: 12, 
+    borderRadius: 20, 
+    borderWidth: 1, 
     borderColor: '#dfe6e9', 
     backgroundColor: '#fff',
-    elevation: 2, // Hafif gölge
+    elevation: 2, 
   },
   catButtonActive: { 
-    backgroundColor: '#6c5ce7', // Modern Mor (Lila)
+    backgroundColor: '#6c5ce7', 
     borderColor: '#6c5ce7', 
   },
   catText: { 
     color: '#b2bec3', 
     fontWeight: '600',
+    fontSize: 12, 
   },
   catTextActive: { 
     color: '#fff', 
     fontWeight: 'bold', 
   },
-  // Sayaç Stilleri
+  
+  // --- YENİ EKLENEN SÜRE SEÇİCİ STİLLERİ ---
+  timeSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 30,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 20,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: {width: 0, height: 2}
+  },
+  timeBtn: {
+    backgroundColor: '#f1f2f6',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledBtn: {
+    opacity: 0.3
+  },
+  timeBtnText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6c5ce7'
+  },
+  timeDisplay: {
+    marginHorizontal: 20,
+    alignItems: 'center'
+  },
+  timeLabel: {
+    fontSize: 10,
+    color: '#b2bec3',
+    fontWeight: 'bold',
+    letterSpacing: 1
+  },
+  timeValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2d3436'
+  },
+
+  // Sayaç
   timerCircle: { 
-    width: 280, 
-    height: 280, 
-    borderRadius: 140, 
+    width: 260, 
+    height: 260, 
+    borderRadius: 130, 
     borderWidth: 8, 
-    borderColor: '#a29bfe', // Açık Mor
+    borderColor: '#a29bfe', 
     justifyContent: 'center', 
     alignItems: 'center', 
-    marginBottom: 50, 
+    marginBottom: 40, 
     backgroundColor: '#fff',
-    elevation: 10, // Belirgin gölge (3D efekti)
+    elevation: 10, 
     shadowColor: '#6c5ce7',
     shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 5 }
   },
   timerText: { 
-    fontSize: 70, 
-    color: '#2d3436', // Koyu Gri
+    fontSize: 65, 
+    color: '#2d3436', 
     fontWeight: 'bold', 
-    fontVariant: ['tabular-nums'], // Rakamların titremesini engeller
+    fontVariant: ['tabular-nums'], 
   },
   distractionText: { 
-    color: '#ff7675', // Soft Kırmızı
+    color: '#ff7675', 
     marginTop: 10, 
     fontSize: 16,
     fontWeight: '600'
   },
-  // Buton Stilleri
+  // Butonlar
   buttonContainer: { 
     flexDirection: 'row', 
     gap: 20,
   },
   button: { 
-    paddingVertical: 18, 
+    paddingVertical: 15, 
     paddingHorizontal: 40, 
     borderRadius: 30,
     elevation: 5,
@@ -229,21 +331,21 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 3 }
   },
-  startButton: { backgroundColor: '#00b894' }, // Mint Yeşili
-  pauseButton: { backgroundColor: '#fdcb6e' }, // Hardal Sarısı
-  resetButton: { backgroundColor: '#ff7675' }, // Soft Kırmızı (Mercan)
+  startButton: { backgroundColor: '#00b894' }, 
+  pauseButton: { backgroundColor: '#fdcb6e' }, 
+  resetButton: { backgroundColor: '#ff7675' }, 
   buttonText: { 
     color: '#fff', 
     fontSize: 18, 
     fontWeight: 'bold',
     letterSpacing: 0.5 
   },
-  // Modal Stilleri
+  // Modal
   modalContainer: { 
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    backgroundColor: 'rgba(45, 52, 54, 0.8)', // Arkası hafif koyu
+    backgroundColor: 'rgba(45, 52, 54, 0.9)', 
   },
   modalContent: { 
     width: '85%', 
@@ -272,7 +374,7 @@ const styles = StyleSheet.create({
   modalValue: { fontSize: 18, fontWeight: 'bold', color: '#2d3436' },
   closeButton: { 
     marginTop: 20, 
-    backgroundColor: '#6c5ce7', // Ana Mor Renk
+    backgroundColor: '#6c5ce7', 
     paddingVertical: 15,
     borderRadius: 15, 
     width: '100%', 
