@@ -1,201 +1,93 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, StatusBar } from 'react-native';
-import { BarChart, PieChart } from 'react-native-chart-kit';
-
-// Ekran genişliğini al
-const screenWidth = Dimensions.get("window").width;
-
-// --- 1. KÜÇÜK BİLEŞEN: İSTATİSTİK KARTI ---
-// Hocanın istediği "Bileşen Bazlı" yapıya uygun olarak kartı ayırdık.
-const StatCard = ({ title, value, color, icon }) => (
-  <View style={[styles.statCard, { borderLeftColor: color }]}>
-    <Text style={styles.statLabel}>{title} {icon}</Text>
-    <Text style={[styles.statValue, { color: color }]}>{value}</Text>
-  </View>
-);
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { BarChart, PieChart } from "react-native-gifted-charts";
 
 export default function DashboardScreen() {
-  
-  // SİMÜLASYON VERİLERİ
-  const [stats] = useState({
-    bugunOdak: 45,           
-    toplamOdak: 1240,        
-    dikkatDaginikligi: 12    
-  });
+  const [todayFocus, setTodayFocus] = useState(0);
+  const [totalFocus, setTotalFocus] = useState(0);
+  const [distractionCount, setDistractionCount] = useState(0);
 
-  // --- GRAFİK 1: ÇUBUK GRAFİK (Son 7 Gün) ---
-  const barData = {
-    labels: ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"],
-    datasets: [{ data: [30, 60, 45, 90, 20, 120, 10] }]
-  };
+  const [last7DaysData, setLast7DaysData] = useState([]);
+  const [categoryData, setCategoryData] = useState([]);
 
-  // --- GRAFİK 2: PASTA GRAFİK (Kategoriler) ---
-  const pieData = [
-    {
-      name: "Kodlama",
-      population: 50,
-      color: "#6c5ce7", // Mor (Ana Renk)
-      legendFontColor: "#7f7f7f",
-      legendFontSize: 12
-    },
-    {
-      name: "Ders",
-      population: 30,
-      color: "#00b894", // Mint (Başarı Rengi)
-      legendFontColor: "#7f7f7f",
-      legendFontSize: 12
-    },
-    {
-      name: "Kitap",
-      population: 20,
-      color: "#ff7675", // Mercan (Vurgu Rengi)
-      legendFontColor: "#7f7f7f",
-      legendFontSize: 12
-    }
-  ];
+  useEffect(() => {
+    // TODO: Veritabanı verilerini buradan okuyacaksın.
+    // Aşağıdaki örnek dummy veridir, veritabanına bağlanınca burayı doldururuz.
 
-  // Grafik Ayarları (Modern Tema)
-  const chartConfig = {
-    backgroundGradientFrom: "#fff",
-    backgroundGradientTo: "#fff",
-    color: (opacity = 1) => `rgba(108, 92, 231, ${opacity})`, // Çubuklar Mor
-    labelColor: (opacity = 1) => `rgba(99, 110, 114, ${opacity})`, // Yazılar Gri
-    barPercentage: 0.6,
-    decimalPlaces: 0, // Virgüllü sayı gösterme
-  };
+    setTodayFocus(120);          // 120 dakika
+    setTotalFocus(1430);         // 1430 dakika
+    setDistractionCount(12);     // 12 kere
+
+    setLast7DaysData([
+      { value: 60, label: "Pzt" },
+      { value: 45, label: "Sal" },
+      { value: 80, label: "Çar" },
+      { value: 30, label: "Per" },
+      { value: 100, label: "Cum" },
+      { value: 50, label: "Cts" },
+      { value: 90, label: "Paz" },
+    ]);
+
+    setCategoryData([
+      { value: 50, label: "Kodlama", color: "#4CAF50" },
+      { value: 30, label: "Ders", color: "#2196F3" },
+      { value: 20, label: "Kitap", color: "#FF9800" },
+    ]);
+  }, []);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Status Bar Rengi */}
-      <StatusBar barStyle="dark-content" />
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Raporlar (Dashboard)</Text>
 
-      {/* BAŞLIK */}
-      <Text style={styles.header}>Haftalık Özet 📑</Text>
-
-      {/* --- BÖLÜM 1: GENEL İSTATİSTİKLER --- */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Genel Durum 📌</Text>
-        <View style={styles.statsRow}>
-          <StatCard title="Bugün" value={`${stats.bugunOdak} dk`} color="#00b894" icon="🔥" />
-          <StatCard title="Toplam" value={`${stats.toplamOdak} dk`} color="#6c5ce7" icon="⏳" />
-          <StatCard title="Dikkat" value={`${stats.dikkatDaginikligi}`} color="#ff7675" icon="⚠️" />
-        </View>
+      {/* GENEL İSTATİSTİKLER */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Genel İstatistikler</Text>
+        <Text style={styles.cardItem}>Bugün Toplam Odaklanma: {todayFocus} dk</Text>
+        <Text style={styles.cardItem}>Tüm Zamanların Odaklanması: {totalFocus} dk</Text>
+        <Text style={styles.cardItem}>Dikkat Dağınıklığı Sayısı: {distractionCount}</Text>
       </View>
 
-      {/* --- BÖLÜM 2: ÇUBUK GRAFİK --- */}
-      <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Günlük Performans 📊</Text>
+      {/* 7 GÜNLÜK BAR CHART */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Son 7 Gün – Odaklanma Süreleri</Text>
+
         <BarChart
-          data={barData}
-          width={screenWidth - 40}
-          height={220}
-          yAxisSuffix=" dk"
-          chartConfig={chartConfig}
-          verticalLabelRotation={0}
-          fromZero={true}
-          showValuesOnTopOfBars={true}
-          withInnerLines={false} // Arkadaki çizgileri kaldırdık (daha temiz)
-          style={styles.chartStyle}
+          barWidth={22}
+          noOfSections={4}
+          barBorderRadius={6}
+          data={last7DaysData}
+          frontColor="#2196F3"
+          yAxisTextStyle={{ color: "#555" }}
+          xAxisLabelTextStyle={{ color: "#555" }}
         />
       </View>
 
-      {/* --- BÖLÜM 3: PASTA GRAFİK --- */}
-      <View style={[styles.chartContainer, { marginBottom: 50 }]}>
-        <Text style={styles.chartTitle}>Kategori Dağılımı 🍰</Text>
+      {/* KATEGORİ PIE CHART */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Kategorilere Göre Odaklanma</Text>
+
         <PieChart
-          data={pieData}
-          width={screenWidth - 40}
-          height={220}
-          chartConfig={chartConfig}
-          accessor={"population"}
-          backgroundColor={"transparent"}
-          paddingLeft={"15"}
-          absolute
+          data={categoryData}
+          radius={120}
+          showText
+          textColor="#fff"
+          textSize={14}
         />
       </View>
-
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f8f9fa', // Kırık Beyaz Arka Plan
+  container: { flex: 1, padding: 20, backgroundColor: "#F5F5F5" },
+  title: { fontSize: 26, fontWeight: "bold", textAlign: "center", marginBottom: 20 },
+  card: {
+    backgroundColor: "#fff",
     padding: 20,
-    paddingTop: 40
+    borderRadius: 12,
+    marginBottom: 20,
+    elevation: 2,
   },
-  header: { 
-    fontSize: 28, 
-    fontWeight: 'bold', 
-    color: '#2d3436', 
-    marginBottom: 25,
-    textAlign: 'center' // Ortalanmış Başlık
-  },
-  sectionContainer: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#636e72',
-    marginBottom: 15,
-    marginLeft: 5,
-    letterSpacing: 0.5
-  },
-  // İstatistik Kartları Tasarımı
-  statsRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between' 
-  },
-  statCard: { 
-    width: '31%', 
-    backgroundColor: '#fff', 
-    padding: 15, 
-    borderRadius: 15, 
-    borderLeftWidth: 4, 
-    // Kart Gölgelendirme (3D Efekt)
-    elevation: 4, 
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  statLabel: { 
-    fontSize: 12, 
-    color: '#b2bec3', 
-    fontWeight: 'bold',
-    marginBottom: 8 
-  },
-  statValue: { 
-    fontSize: 18, 
-    fontWeight: 'bold' 
-  },
-  // Grafik Kutuları Tasarımı
-  chartContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 15,
-    marginBottom: 25,
-    // Grafik Kutusu Gölgesi
-    elevation: 3,
-    shadowColor: '#6c5ce7', // Mor gölge
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    alignItems: 'center'
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2d3436',
-    marginBottom: 10,
-    alignSelf: 'flex-start', // Sola yasla
-    marginLeft: 10
-  },
-  chartStyle: {
-    borderRadius: 16,
-    marginTop: 10
-  }
+  cardTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+  cardItem: { fontSize: 16, color: "#333", marginBottom: 5 },
 });
