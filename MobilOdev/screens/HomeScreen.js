@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, AppState, Modal, StatusBar 
 } from 'react-native';
+import { db, auth } from '../firebaseConfig';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function HomeScreen() {
   // 1. YENİ STATE: Başlangıç süresini tutuyoruz (Değiştirilebilir)
@@ -77,8 +79,32 @@ const quotes = [
 ];
 // Rastgele birini seçmek için:
 const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
-  const handleFinish = () => {
+  const handleFinish = async () => {
     setIsActive(false);
+    
+    // 1. Süreyi hesapla
+    const focusDuration = Math.floor((initialTime - timeLeft) / 60);
+    
+    // 2. Eğer süre 0 ise kaydetme (opsiyonel)
+    if (focusDuration <= 0) {
+        setShowSummary(true);
+        return;
+    }
+
+    try {
+      // 3. Firebase Firestore'a kaydet (CREATE)
+      await addDoc(collection(db, "sessions"), {
+        userId: auth.currentUser.uid, // Hangi kullanıcı kaydetti?
+        category: category,
+        duration: focusDuration, // Dakika cinsinden
+        distractions: distractionCount,
+        createdAt: serverTimestamp() // Sunucu saati
+      });
+      console.log("Seans kaydedildi!");
+    } catch (error) {
+      console.error("Hata:", error);
+    }
+
     setShowSummary(true);
   };
 
