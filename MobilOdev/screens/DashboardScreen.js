@@ -1,38 +1,32 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, RefreshControl, ActivityIndicator, Dimensions, TouchableOpacity, Alert } from "react-native";
+import { 
+  View, Text, StyleSheet, ScrollView, RefreshControl, 
+  ActivityIndicator, TouchableOpacity, Alert 
+} from "react-native";
 import { PieChart, BarChart } from "react-native-gifted-charts"; 
-import { db, auth } from '../firebaseConfig';
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
-import { signOut } from "firebase/auth";
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
-const screenWidth = Dimensions.get('window').width;
+// Firebase
+import { signOut } from "firebase/auth";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { db, auth } from '../firebaseConfig';
 
 export default function DashboardScreen() {
-  const [totalFocus, setTotalFocus] = useState(0);       // Tüm Zamanlar
-  const [todayFocus, setTodayFocus] = useState(0);       // YENİ: Bugün
-  const [distractionCount, setDistractionCount] = useState(0); // Dikkat Dağınıklığı
-  
-  const [categoryData, setCategoryData] = useState([]);
-  const [weeklyData, setWeeklyData] = useState([]);
+  // STATELER
+  const [stats, setStats] = useState({ total: 0, today: 0, distractions: 0 });
+  const [chartData, setChartData] = useState({ weekly: [], category: [] });
   const [loading, setLoading] = useState(false);
-  
-  const navigation = useNavigation();
 
-  // --- ÇIKIŞ FONKSİYONU ---
+  // ÇIKIŞ İŞLEMİ
   const handleLogout = () => {
-    Alert.alert(
-      "Çıkış Yap",
-      "Hesabından çıkış yapmak istediğine emin misin?",
-      [
-        { text: "İptal", style: "cancel" },
-        { text: "Çıkış Yap", style: "destructive", onPress: async () => await signOut(auth) }
-      ]
-    );
+    Alert.alert("Çıkış Yap", "Hesabından çıkış yapmak istiyor musun?", [
+      { text: "İptal", style: "cancel" },
+      { text: "Evet", style: "destructive", onPress: () => signOut(auth) }
+    ]);
   };
 
-  // Dakikayı Saate Çevirme (Örn: 1 sa 30 dk)
+  // --- SÜRE (dk -> sa dk) ---
   const formatTime = (minutes) => {
     if (minutes < 60) return `${minutes} dk`;
     const hrs = Math.floor(minutes / 60);
@@ -40,113 +34,102 @@ export default function DashboardScreen() {
     return `${hrs} sa ${mins} dk`;
   };
 
+  // VERİ ÇEKME VE HESAPLAMA
   const fetchData = async () => {
     if (!auth.currentUser) return;
-
     setLoading(true);
+
     try {
+      // 1. Veritabanı Sorgusu
       const q = query(
         collection(db, "sessions"), 
         where("userId", "==", auth.currentUser.uid),
         orderBy("createdAt", "desc")
       );
-
       const querySnapshot = await getDocs(q);
       
-      let calcTotalTime = 0;
-      let calcTodayTime = 0; // Bugünün toplamı
-      let calcTotalDistraction = 0;
-      let categories = {};
+      // Geçici Değişkenler
+      let totalTime = 0, todayTime = 0, totalDistractions = 0;
+      let categoryMap = {};
       
-      // Tarih Ayarları
+      // Tarih Hesapları
       const now = new Date();
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0); // Bugünün başlangıcı (00:00)
+      const startOfToday = new Date(now.setHours(0,0,0,0));
+      const sevenDaysAgo = new Date(now);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      // Haftalık Grafik İçin Hazırlık
+      // Haftalık Grafik Şablonu
       const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
-      let tempWeekly = Array(7).fill(0).map((_, i) => ({
-        label: days[i],
-        value: 0,
-        frontColor: '#6c5ce7',
+      let weeklyTemp = Array(7).fill(0).map((_, i) => ({
+        label: days[i], value: 0, frontColor: '#6c5ce7',
         topLabelComponent: () => <Text style={{color: '#6c5ce7', fontSize: 10, marginBottom: 2}}>0</Text>
       }));
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(now.getDate() - 7);
 
+      // 2. Verileri İşle
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         const duration = data.duration || 0;
-        
-        // 1. Tüm Zamanlar Toplamı
-        calcTotalTime += duration;
-        calcTotalDistraction += data.distractions || 0;
+        const sessionDate = data.createdAt?.toDate();
 
-        // 2. Bugünün Toplamı (Tarih Kontrolü)
-        if (data.createdAt) {
-            const sessionDate = data.createdAt.toDate();
-            if (sessionDate >= startOfToday) {
-                calcTodayTime += duration;
-            }
+        // Genel Toplamlar
+        totalTime += duration;
+        totalDistractions += (data.distractions || 0);
 
-            // 3. Haftalık Grafik Verisi
-            if (sessionDate >= sevenDaysAgo) {
-                const dayIndex = sessionDate.getDay();
-                tempWeekly[dayIndex].value += duration;
-                tempWeekly[dayIndex].topLabelComponent = () => (
-                   <Text style={{color: '#6c5ce7', fontSize: 10, marginBottom: 2}}>
-                     {tempWeekly[dayIndex].value}
-                   </Text>
-                );
-            }
+        // Tarih Kontrolleri
+        if (sessionDate) {
+          // Bugün mü?
+          if (sessionDate >= startOfToday) todayTime += duration;
+
+          // Son 7 gün mü? (Bar Chart)
+          if (sessionDate >= sevenDaysAgo) {
+            const dayIndex = sessionDate.getDay();
+            weeklyTemp[dayIndex].value += duration;
+            // Grafik üzerindeki sayı etiketi
+            weeklyTemp[dayIndex].topLabelComponent = () => (
+               <Text style={{color: '#6c5ce7', fontSize: 10, marginBottom: 2}}>
+                 {weeklyTemp[dayIndex].value}
+               </Text>
+            );
+          }
         }
 
-        // 4. Kategori Verisi
-        if (categories[data.category]) {
-          categories[data.category] += duration;
-        } else {
-          categories[data.category] = duration;
-        }
+        // Kategori Gruplama (Pie Chart)
+        categoryMap[data.category] = (categoryMap[data.category] || 0) + duration;
       });
 
-      // State'leri Güncelle
-      setTotalFocus(calcTotalTime);
-      setTodayFocus(calcTodayTime); // YENİ
-      setDistractionCount(calcTotalDistraction);
-      setWeeklyData(tempWeekly);
-
-      // Pie Chart Renkleri
+      // 3. Pasta Grafiği Verisini Hazırla
       const colors = ['#00b894', '#6c5ce7', '#fab1a0', '#0984e3', '#fdcb6e'];
-      const pieData = Object.keys(categories).map((key, index) => ({
-        value: categories[key],
+      const pieTemp = Object.keys(categoryMap).map((key, index) => ({
+        value: categoryMap[key],
         color: colors[index % colors.length],
-        text: `${Math.round((categories[key] / calcTotalTime) * 100)}%`,
+        text: `${Math.round((categoryMap[key] / totalTime) * 100)}%`,
         legend: key 
       }));
-      setCategoryData(pieData);
+
+      // State Güncelleme
+      setStats({ total: totalTime, today: todayTime, distractions: totalDistractions });
+      setChartData({ weekly: weeklyTemp, category: pieTemp });
 
     } catch (error) {
-      console.error("Veri çekme hatası:", error);
+      console.error("Veri hatası:", error);
     }
     setLoading(false);
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [])
-  );
+  // Sayfa her odaklandığında veriyi yenile
+  useFocusEffect(useCallback(() => { fetchData(); }, []));
 
+  
   const CenterLabel = () => (
     <View style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#2d3436' }}>{categoryData.length}</Text>
+      <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#2d3436' }}>{chartData.category.length}</Text>
       <Text style={{ fontSize: 10, color: '#636e72' }}>Kategori</Text>
     </View>
   );
 
   const renderLegend = () => (
     <View style={styles.legendContainer}>
-      {categoryData.map((item, index) => (
+      {chartData.category.map((item, index) => (
         <View key={index} style={styles.legendItem}>
           <View style={[styles.colorDot, { backgroundColor: item.color }]} />
           <Text style={styles.legendText}>{item.legend}</Text>
@@ -161,8 +144,7 @@ export default function DashboardScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
       showsVerticalScrollIndicator={false}
     >
-      
-      {/* HEADER */}
+      {/* BAŞLIK */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Haftalık Analiz 📈</Text>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -170,34 +152,20 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* --- YENİLENMİŞ İSTATİSTİK KARTLARI (3 Tane Yan Yana) --- */}
+      {/* İSTATİSTİK KARTLARI */}
       <View style={styles.statsRow}>
-        {/* KART 1: BUGÜN */}
-        <View style={[styles.statCard, { borderLeftColor: '#00b894' }]}>
-          <Text style={styles.statLabel}>Bugün</Text>
-          <Text style={[styles.statValue, { color: '#00b894' }]}>{formatTime(todayFocus)}</Text>
-        </View>
-
-        {/* KART 2: TOPLAM */}
-        <View style={[styles.statCard, { borderLeftColor: '#6c5ce7' }]}>
-          <Text style={styles.statLabel}>Toplam</Text>
-          <Text style={[styles.statValue, { color: '#6c5ce7' }]}>{formatTime(totalFocus)}</Text>
-        </View>
-
-        {/* KART 3: DİKKAT */}
-        <View style={[styles.statCard, { borderLeftColor: '#ff7675' }]}>
-          <Text style={styles.statLabel}>Dikkat</Text>
-          <Text style={[styles.statValue, { color: '#ff7675' }]}>{distractionCount}</Text>
-        </View>
+        <StatCard label="Bugün" value={formatTime(stats.today)} color="#00b894" />
+        <StatCard label="Toplam" value={formatTime(stats.total)} color="#6c5ce7" />
+        <StatCard label="Dikkat" value={stats.distractions} color="#ff7675" />
       </View>
 
-      {/* --- BAR CHART (ÇUBUK GRAFİK) --- */}
+      {/*  ÇUBUK GRAFİK (BAR CHART)  */}
       <View style={styles.chartCard}>
         <Text style={styles.cardTitle}>Günlük Performans (dk)</Text>
-        {loading ? <ActivityIndicator size="small" color="#6c5ce7" /> : (
+        {loading ? <ActivityIndicator color="#6c5ce7" /> : (
           <View style={{ overflow: 'hidden' }}> 
             <BarChart
-              data={weeklyData}
+              data={chartData.weekly}
               barWidth={22}
               noOfSections={4}
               barBorderRadius={4}
@@ -213,13 +181,13 @@ export default function DashboardScreen() {
         )}
       </View>
 
-      {/* --- PIE CHART (HALKA GRAFİK) --- */}
+      {/* PASTA GRAFİK (PIE CHART) */}
       <View style={[styles.chartCard, { marginBottom: 50 }]}>
         <Text style={styles.cardTitle}>Kategori Dağılımı</Text>
-        {loading ? <ActivityIndicator size="large" color="#6c5ce7" /> : categoryData.length > 0 ? (
+        {loading ? <ActivityIndicator color="#6c5ce7" /> : chartData.category.length > 0 ? (
           <View style={{ alignItems: 'center' }}>
             <PieChart
-              data={categoryData}
+              data={chartData.category}
               donut 
               showText
               textColor="black"
@@ -232,57 +200,50 @@ export default function DashboardScreen() {
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Henüz veri bulunmuyor. 📉</Text>
+            <Text style={styles.emptyText}>Henüz veri yok. 📉</Text>
           </View>
         )}
       </View>
-
     </ScrollView>
   );
 }
 
+// Kart Bileşeni 
+const StatCard = ({ label, value, color }) => (
+  <View style={[styles.statCard, { borderLeftColor: color }]}>
+    <Text style={styles.statLabel}>{label}</Text>
+    <Text style={[styles.statValue, { color: color }]}>{value}</Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#f8f9fa" },
   
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 20,
-  },
+  // Header
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 40, marginBottom: 20 },
   headerTitle: { fontSize: 26, fontWeight: "bold", color: "#2d3436" },
-  logoutButton: {
-    padding: 8, backgroundColor: '#fff', borderRadius: 12, elevation: 2,
-    shadowColor: '#000', shadowOpacity: 0.1, shadowOffset: {width: 0, height: 1}
-  },
+  logoutButton: { padding: 8, backgroundColor: '#fff', borderRadius: 12, elevation: 2 },
 
-  // İstatistik Kartları (3'lü yapı)
+  // İstatistik Kartları
   statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   statCard: { 
-    width: '31%', // Ekrana 3 tane sığması için %31 yaptık
-    backgroundColor: "#fff", 
-    paddingVertical: 15, paddingHorizontal: 5, 
-    borderRadius: 12, 
-    borderLeftWidth: 3, 
-    elevation: 3, 
-    alignItems: 'center', // Yazıları ortaladık
-    shadowColor: '#000', shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 } 
+    width: '31%', backgroundColor: "#fff", paddingVertical: 15, borderRadius: 12, 
+    borderLeftWidth: 3, elevation: 3, alignItems: 'center', shadowOpacity: 0.1 
   },
   statLabel: { fontSize: 11, color: "#b2bec3", fontWeight: "bold", marginBottom: 5 },
   statValue: { fontSize: 16, fontWeight: "bold", textAlign: 'center' },
 
-  chartCard: { 
-    backgroundColor: "#fff", padding: 20, borderRadius: 20, marginBottom: 20, 
-    elevation: 3, shadowColor: '#000', shadowOpacity: 0.05
-  },
+  // Grafikler
+  chartCard: { backgroundColor: "#fff", padding: 20, borderRadius: 20, marginBottom: 20, elevation: 3 },
   cardTitle: { fontSize: 18, fontWeight: "bold", color: "#2d3436", marginBottom: 20, textAlign: "center" },
   
+  // Legend (Açıklama)
   legendContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 20, gap: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', marginRight: 10 },
   colorDot: { width: 10, height: 10, borderRadius: 5, marginRight: 5 },
   legendText: { fontSize: 12, color: "#636e72" },
 
+  // Boş Durum
   emptyState: { alignItems: 'center', padding: 20 },
   emptyText: { fontSize: 16, fontWeight: 'bold', color: '#b2bec3' }
 });
