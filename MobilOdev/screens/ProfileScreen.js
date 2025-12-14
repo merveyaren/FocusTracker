@@ -34,7 +34,7 @@ export default function ProfileScreen() {
           <Ionicons name="person" size={40} color="#fff" />
         </View>
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>Öğrenci Hesabı</Text>
+          <Text style={styles.userName}>Hesap</Text>
           <Text style={styles.userEmail}>{userEmail}</Text>
         </View>
       </View>
@@ -42,13 +42,6 @@ export default function ProfileScreen() {
       {/* --- AYARLAR MENÜSÜ (Görsel Amaçlı) --- */}
       <Text style={styles.sectionTitle}>Ayarlar</Text>
       
-      <View style={styles.menuItem}>
-        <View style={styles.menuIconInfo}>
-          <Ionicons name="notifications-outline" size={24} color="#6c5ce7" />
-          <Text style={styles.menuText}>Bildirimler</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="#b2bec3" />
-      </View>
 
       <View style={styles.menuItem}>
         <View style={styles.menuIconInfo}>
@@ -58,13 +51,6 @@ export default function ProfileScreen() {
         <Ionicons name="chevron-forward" size={20} color="#b2bec3" />
       </View>
       
-      <View style={styles.menuItem}>
-        <View style={styles.menuIconInfo}>
-          <Ionicons name="language-outline" size={24} color="#6c5ce7" />
-          <Text style={styles.menuText}>Dil Seçeneği</Text>
-        </View>
-        <Text style={{color: '#b2bec3'}}>Türkçe</Text>
-      </View>
 
       {/* --- ÇIKIŞ BUTONU --- */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
