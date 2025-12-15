@@ -1,13 +1,13 @@
 // firebaseConfig.js
 import { initializeApp } from "firebase/app";
 // Auth ve Firestore modüllerini çağırıyoruz
-import { getAuth, initializeAuth, getReactNativePersistence } from "firebase/auth";
+import {initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
-// BURAYA KENDİ FIREBASE BİLGİLERİNİ YAPIŞTIR
+
 const firebaseConfig = {
-  apiKey: "AIzaSyBbdrsRw3vPGCX0aklDC7N4eWXTtEDPBgQ", // Kendi API Key'in
+  apiKey: "AIzaSyBbdrsRw3vPGCX0aklDC7N4eWXTtEDPBgQ", 
   authDomain: "mobilodev2-dd805.firebaseapp.com",
   projectId: "mobilodev2-dd805",
   storageBucket: "mobilodev2-dd805.firebasestorage.app",

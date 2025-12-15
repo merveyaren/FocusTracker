@@ -8,7 +8,7 @@ import { db, auth } from '../firebaseConfig';
 
 export default function HomeScreen() {
   // STATE TANIMLARI
-  const [isBreak, setIsBreak] = useState(false);        // Mola modu mu?
+  const [isBreak, setIsBreak] = useState(false);        // Odak mı Mola mı
   const [initialTime, setInitialTime] = useState(25 * 60); // Başlangıç süresi (sn)
   const [timeLeft, setTimeLeft] = useState(25 * 60);    // Kalan süre (sn)
   const [isActive, setIsActive] = useState(false);      // Sayaç çalışıyor mu?
@@ -23,9 +23,9 @@ export default function HomeScreen() {
   // Mola: Yeşil Odak: Mor
   const themeColor = isBreak ? '#00b894' : '#6c5ce7'; 
 
-  // SES AYARLARI (Sessiz modda çalması için) 
+  // SES AYARLARI 
   useEffect(() => {
-    async function configureAudio() {
+    async function configureAudio() {// Telofon sessizde olsa bile sesin çalabilmesi için
       try {
         await Audio.setAudioModeAsync({
           playsInSilentModeIOS: true,
@@ -84,7 +84,7 @@ export default function HomeScreen() {
       await addDoc(collection(db, "sessions"), {
         userId: auth.currentUser.uid,
         category: category,
-        duration: durationInMinutes, // Dakika cinsinden
+        duration: durationInMinutes, 
         distractions: distractionCount,
         createdAt: serverTimestamp()
       });
@@ -125,10 +125,10 @@ export default function HomeScreen() {
     let interval = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => {
-        setTimeLeft((time) => time - 1);
+        setTimeLeft((time) => time - 1);// her saniye 1 azalt
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
-      // SÜRE BİTTİ
+      // SÜRE BİTTİ - sayaç dur alarm çal veritabanına kaydet
       setIsActive(false);
       playSound();   // Alarm çal
       saveSession(); // Kaydet
@@ -142,34 +142,34 @@ export default function HomeScreen() {
   // DİKKAT DAĞINIKLIĞI TAKİBİ
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
-      // Uygulama alta atılırsa (Background) ve sayaç çalışıyorsa
+      // Uygulama alta atılırsa ve sayaç çalışıyorsa
       if (
         appState.current.match(/active/) && 
         nextAppState.match(/inactive|background/) &&
         isActive && !isBreak 
       ) {
-        setIsActive(false); // Duraklat
-        setDistractionCount((prev) => prev + 1); // Sayacı artır
+        setIsActive(false); // Sayacı duraklat
+        setDistractionCount((prev) => prev + 1); // Dikkat sayacı artır
       }
       appState.current = nextAppState;
     });
     return () => subscription.remove();
   }, [isActive, isBreak]);
 
-  // YARDIMCI FONKSİYONLAR
+  // 
   const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
+    const m = Math.floor(seconds / 60);//toplam saniyeyi 60 a böler  ve tam kısmı gelir
+    const s = seconds % 60;//artan saniye
     return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const handleFinish = () => {
+  const handleFinish = () => {//süre bitmeden bitir butonuna basılınca burası çalışır
     setIsActive(false);
     saveSession();
     setShowSummary(true);
   };
 
-  const closeSummary = () => {
+  const closeSummary = () => {//tamam butonu
     stopSound();
     setShowSummary(false);
     setIsActive(false);
@@ -182,7 +182,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" /> 
-      <Text style={styles.header}>Pomodoro Uygulaması</Text>
+      <Text style={styles.header}>Odaklanma Uygulaması</Text>
 
       {/*  MOD SEÇİMİ  */}
       <View style={styles.tabContainer}>
@@ -190,7 +190,7 @@ export default function HomeScreen() {
           style={[styles.tabButton, !isBreak && styles.activeTab, {borderColor: themeColor}]} 
           onPress={() => switchMode('focus')}
         >
-          <Text style={[styles.tabText, !isBreak && {color: '#fff'}]}>ODAKLAN</Text>
+          <Text style={[styles.tabText, !isBreak && {color: '#ffffffff'}]}>ODAKLAN</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 

@@ -49,7 +49,7 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Odaklanma Uygulaması 🍅</Text>
+      <Text style={styles.title}>Odaklanma Uygulaması </Text>
       
       {/* E-Posta Girişi */}
       <TextInput

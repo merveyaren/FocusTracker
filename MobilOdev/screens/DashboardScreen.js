@@ -15,7 +15,7 @@ import { db, auth } from '../firebaseConfig';
 export default function DashboardScreen() {
   // STATELER
   const [stats, setStats] = useState({ total: 0, today: 0, distractions: 0 });
-  const [chartData, setChartData] = useState({ weekly: [], category: [] });
+  const [chartData, setChartData] = useState({ weekly: [], category: [] });//haftalık ve kategori bazlı
   const [loading, setLoading] = useState(false);
 
   // ÇIKIŞ İŞLEMİ
@@ -61,8 +61,8 @@ export default function DashboardScreen() {
       // Haftalık Grafik Şablonu
       const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
       let weeklyTemp = Array(7).fill(0).map((_, i) => ({
-        label: days[i], value: 0, frontColor: '#6c5ce7',
-        topLabelComponent: () => <Text style={{color: '#6c5ce7', fontSize: 10, marginBottom: 2}}>0</Text>
+        label: days[i], value: 0, frontColor: '#a69bffff',
+        topLabelComponent: () => <Text style={{color: '#b2a8ffff', fontSize: 10, marginBottom: 2}}>0</Text>
       }));
 
       // 2. Verileri İşle
@@ -146,7 +146,7 @@ export default function DashboardScreen() {
     >
       {/* BAŞLIK */}
       <View style={styles.headerRow}>
-        <Text style={styles.headerTitle}>Haftalık Analiz 📈</Text>
+        <Text style={styles.headerTitle}>Haftalık Analiz</Text>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#ff7675" />
         </TouchableOpacity>
